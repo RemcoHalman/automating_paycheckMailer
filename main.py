@@ -18,15 +18,15 @@ import email_config
 
 PATH = email_config.PATH
 MAIL_FROM = email_config.MAIL_FROM
-EMAIL_STAFF_FIRSTNAME = email_config.EMAIL_STAFF_FIRSTNAME
-EMAIL_STAFF_LASTNAME = email_config.EMAIL_STAFF_LASTNAME
+EMAIL_STAFF_FIRSTNAME = "<Firstname>"
+EMAIL_STAFF_LASTNAME = "<Lastname>"
 EMAIL_STAFF_NAME = EMAIL_STAFF_FIRSTNAME + " " + EMAIL_STAFF_LASTNAME
-EMAIL_TO_STAFF = email_config.EMAIL_TO_STAFF
+EMAIL_TO_STAFF = "<Email>"
 EMAIL_SUBJECT = email_config.EMAIL_SUBJECT
 CURRENT_TIME = time.asctime(time.localtime(time.time()))
 
 logging.basicConfig(
-    filename=f"~/logs/Payslip_Send_{EMAIL_STAFF_FIRSTNAME}.log",
+    filename=f"/Users/Remco/logs/Payslip_Send_{EMAIL_STAFF_FIRSTNAME}.log",
     level=logging.INFO,
     format="%(asctime)s: (%(levelname)s) :%(message)s",
     datefmt="%d-%m-%Y %H:%M:%S",
@@ -37,9 +37,9 @@ class SendMail:
     def send_email(self, EMAIL_TO, file_path):
         content = "".join(
             [
-                f"""{email_config.TIME_GREETING} {EMAIL_STAFF_FIRSTNAME} {EMAIL_STAFF_LASTNAME},<br/>
+                f"""{email_config.TIME_GREETING} {EMAIL_STAFF_FIRSTNAME},<br/>
                 <br/>
-                Bijgaande zit het loonstrookje van afgelopen maand<br/>
+                Bijgaande zit het loonstrookje van afgelopen periode.<br/>
                 Mochten hier verdere vragen over zijn hoor ik die graag.<br/>
                 <br/>
                 Met vriendelijke groet,<br/>
@@ -68,10 +68,7 @@ class SendMail:
         part.add_header("Content-Disposition", "attachment; filename= %s" % filename)
         msg.attach(part)
 
-        mail = smtplib.SMTP(f"{email_config.SMTP_SERVER}")
-        mail.connect(f"{email_config.SMTP_SERVER}", email_config.PORT)
-
-        mail.starttls()
+        mail = smtplib.SMTP_SSL(f"{email_config.SMTP_SERVER}", email_config.PORT)
         mail.login(email_config.USERNAME, email_config.PASSWORD)
         mail.sendmail(MAIL_FROM, EMAIL_TO, msg.as_string())
         mail.quit()
@@ -79,7 +76,13 @@ class SendMail:
 
 
 class Watchdog(PatternMatchingEventHandler, Observer):
-    def __init__(self, path=PATH, patterns="*", logfunc=logging.info):
+    def __init__(
+        self,
+        path=PATH,
+        patterns="*",
+        ignore_patterns=[".DS_Store"],
+        logfunc=logging.info,
+    ):
         PatternMatchingEventHandler.__init__(self, patterns)
         Observer.__init__(self)
         self.schedule(self, path=path, recursive=True)
@@ -88,8 +91,8 @@ class Watchdog(PatternMatchingEventHandler, Observer):
     def on_created(self, event):
         # This function is called when a file is created
         self.log(f"{event.src_path} has been created!")
-        # obj = SendMail()
-        # obj.send_email(EMAIL_TO_STAFF, event.src_path)
+        obj = SendMail()
+        obj.send_email(EMAIL_TO_STAFF, event.src_path)
 
     def on_deleted(self, event):
         # This function is called when a file is deleted
@@ -99,6 +102,7 @@ class Watchdog(PatternMatchingEventHandler, Observer):
 if __name__ == "__main__":
     observer = Watchdog()
     observer.start()
+    print("running")
     try:
         while True:
             time.sleep(1)
